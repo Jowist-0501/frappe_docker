@@ -1,3 +1,5 @@
+version: "3.7"
+
 x-customizable-image: &customizable_image
   # By default the image used only contains the `frappe` and `erpnext` apps.
   # See https://github.com/frappe/frappe_docker/blob/main/docs/custom-apps.md
@@ -23,7 +25,6 @@ services:
     entrypoint:
       - bash
       - -c
-    # add redis_socketio for backward compatibility
     command:
       - >
         ls -1 apps > sites/apps.txt;
@@ -51,6 +52,9 @@ services:
     platform: linux/amd64
     command:
       - nginx-entrypoint.sh
+    # HIER: Port-Mapping auf 82 statt 80
+    ports:
+      - "82:80"
     environment:
       BACKEND: backend:8000
       SOCKETIO: websocket:9000
@@ -90,6 +94,5 @@ services:
     platform: linux/amd64
     command: bench schedule
 
-# ERPNext requires local assets access (Frappe does not)
 volumes:
   sites:
