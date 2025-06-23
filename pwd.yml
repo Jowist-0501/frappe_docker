@@ -110,6 +110,12 @@ services:
     deploy:
       restart_policy:
         condition: on-failure
+      labels:
+        - "traefik.enable=true"
+        - "traefik.http.routers.erp.rule=Host(`erp.era-tools.de`)"
+        - "traefik.http.routers.erp.entrypoints=websecure"
+        - "traefik.http.routers.erp.tls.certresolver=myresolver"
+        - "traefik.http.services.erp.loadbalancer.server.port=80"
     command:
       - nginx-entrypoint.sh
     environment:
@@ -124,8 +130,6 @@ services:
     volumes:
       - sites:/home/frappe/frappe-bench/sites
       - logs:/home/frappe/frappe-bench/logs
-    ports:
-      - "82:80"            # geändert von "8080:8080" auf "82:80"
 
   queue-long:
     image: frappe/erpnext:v15.65.4

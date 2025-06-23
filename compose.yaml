@@ -52,9 +52,12 @@ services:
     platform: linux/amd64
     command:
       - nginx-entrypoint.sh
-    # HIER: Port-Mapping auf 82 statt 80
-    ports:
-      - "82:80"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.erp.rule=Host(`erp.era-tools.de`)"
+      - "traefik.http.routers.erp.entrypoints=websecure"
+      - "traefik.http.routers.erp.tls.certresolver=myresolver"
+      - "traefik.http.services.erp.loadbalancer.server.port=80"
     environment:
       BACKEND: backend:8000
       SOCKETIO: websocket:9000
