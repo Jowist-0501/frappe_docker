@@ -96,7 +96,9 @@ services:
       - "traefik.http.routers.erp.rule=Host(`erp.era-tools.de`)"
       - "traefik.http.routers.erp.entrypoints=websecure"
       - "traefik.http.routers.erp.tls.certresolver=myresolver"
-      - "traefik.http.services.erp.loadbalancer.server.port=80"
+      - "traefik.http.services.erp.loadbalancer.server.port=8080"
+    ports:
+      - "8020:8080"
     command: ["nginx-entrypoint.sh"]
     environment:
       BACKEND: backend:8000
