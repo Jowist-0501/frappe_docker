@@ -23,18 +23,12 @@ services:
     entrypoint: ["bash", "-c"]
     command: >
       ls -1 apps > sites/apps.txt &&
-      bench set-config -g db_host $DB_HOST &&
-      bench set-config -gp db_port $DB_PORT &&
-      bench set-config -g redis_cache "redis://$REDIS_CACHE" &&
-      bench set-config -g redis_queue "redis://$REDIS_QUEUE" &&
-      bench set-config -g redis_socketio "redis://$REDIS_QUEUE" &&
-      bench set-config -gp socketio_port $SOCKETIO_PORT
-    environment:
-      DB_HOST: db
-      DB_PORT: "3306"
-      REDIS_CACHE: redis-cache:6379
-      REDIS_QUEUE: redis-queue:6379
-      SOCKETIO_PORT: "9000"
+      bench set-config -g db_host db &&
+      bench set-config -gp db_port 3306 &&
+      bench set-config -g redis_cache redis://redis-cache:6379 &&
+      bench set-config -g redis_queue redis://redis-queue:6379 &&
+      bench set-config -g redis_socketio redis://redis-queue:6379 &&
+      bench set-config -gp socketio_port 9000
     volumes:
       - sites:/home/frappe/frappe-bench/sites
       - logs:/home/frappe/frappe-bench/logs
@@ -44,9 +38,6 @@ services:
     networks:
       - frappe_network
     restart: "no"
-    volumes:
-      - sites:/home/frappe/frappe-bench/sites
-      - logs:/home/frappe/frappe-bench/logs
     entrypoint: ["bash", "-c"]
     command: >
       wait-for-it -t 120 db:3306 &&
@@ -63,24 +54,27 @@ services:
       done &&
       echo "sites/common_site_config.json found" &&
       bench new-site --mariadb-user-host-login-scope='%' --admin-password=admin --db-root-username=root --db-root-password=admin --install-app erpnext --set-default frontend
+    volumes:
+      - sites:/home/frappe/frappe-bench/sites
+      - logs:/home/frappe/frappe-bench/logs
 
   db:
     image: mariadb:10.6
     networks:
       - frappe_network
-    healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "--password=admin"]
-      interval: 1s
-      retries: 20
     restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: admin
+      MARIADB_ROOT_PASSWORD: admin
     command:
       - --character-set-server=utf8mb4
       - --collation-server=utf8mb4_unicode_ci
       - --skip-character-set-client-handshake
       - --skip-innodb-read-only-compressed
-    environment:
-      MYSQL_ROOT_PASSWORD: admin
-      MARIADB_ROOT_PASSWORD: admin
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "--password=admin"]
+      interval: 1s
+      retries: 20
     volumes:
       - db-data:/var/lib/mysql
 
@@ -94,11 +88,13 @@ services:
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.erp.rule=Host(`erp.era-tools.de`)"
+      - "traefik.http.routers.erp.entrypoints=web"
       - "traefik.http.routers.erp.entrypoints=websecure"
       - "traefik.http.routers.erp.tls.certresolver=myresolver"
-      - "traefik.http.services.erp.loadbalancer.server.port=8080"
+      - "traefik.http.routers.erp.service=erp"
+      - "traefik.http.services.erp.loadbalancer.server.port=8020"
     ports:
-      - "8020:8080"
+      - "8020:80"
     command: ["nginx-entrypoint.sh"]
     environment:
       BACKEND: backend:8000
@@ -113,12 +109,12 @@ services:
       - sites:/home/frappe/frappe-bench/sites
       - logs:/home/frappe/frappe-bench/logs
 
-  queue-long:
+  scheduler:
     image: frappe/erpnext:v15.65.4
     networks:
       - frappe_network
     restart: unless-stopped
-    command: ["bench", "worker", "--queue", "long,default,short"]
+    command: ["bench", "schedule"]
     volumes:
       - sites:/home/frappe/frappe-bench/sites
       - logs:/home/frappe/frappe-bench/logs
@@ -133,26 +129,12 @@ services:
       - sites:/home/frappe/frappe-bench/sites
       - logs:/home/frappe/frappe-bench/logs
 
-  redis-queue:
-    image: redis:6.2-alpine
-    networks:
-      - frappe_network
-    restart: unless-stopped
-    volumes:
-      - redis-queue-data:/data
-
-  redis-cache:
-    image: redis:6.2-alpine
-    networks:
-      - frappe_network
-    restart: unless-stopped
-
-  scheduler:
+  queue-long:
     image: frappe/erpnext:v15.65.4
     networks:
       - frappe_network
     restart: unless-stopped
-    command: ["bench", "schedule"]
+    command: ["bench", "worker", "--queue", "long,default,short"]
     volumes:
       - sites:/home/frappe/frappe-bench/sites
       - logs:/home/frappe/frappe-bench/logs
@@ -166,6 +148,20 @@ services:
     volumes:
       - sites:/home/frappe/frappe-bench/sites
       - logs:/home/frappe/frappe-bench/logs
+
+  redis-cache:
+    image: redis:6.2-alpine
+    networks:
+      - frappe_network
+    restart: unless-stopped
+
+  redis-queue:
+    image: redis:6.2-alpine
+    networks:
+      - frappe_network
+    restart: unless-stopped
+    volumes:
+      - redis-queue-data:/data
 
 volumes:
   db-data:
