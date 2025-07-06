@@ -4,7 +4,7 @@ services:
   backend:
     image: frappe/erpnext:v15.65.4
     networks:
-      - default
+      - frappe_network
     restart: unless-stopped
     volumes:
       - sites:/home/frappe/frappe-bench/sites
@@ -18,7 +18,7 @@ services:
   configurator:
     image: frappe/erpnext:v15.65.4
     networks:
-      - default
+      - frappe_network
     restart: "no"
     entrypoint: ["bash", "-c"]
     command: >
@@ -36,7 +36,7 @@ services:
   create-site:
     image: frappe/erpnext:v15.65.4
     networks:
-      - default
+      - frappe_network
     restart: "no"
     entrypoint: ["bash", "-c"]
     command: >
@@ -61,7 +61,7 @@ services:
   db:
     image: mariadb:10.6
     networks:
-      - default
+      - frappe_network
     restart: unless-stopped
     environment:
       MYSQL_ROOT_PASSWORD: admin
@@ -81,7 +81,7 @@ services:
   frontend:
     image: frappe/erpnext:v15.65.4
     networks:
-      - default
+      - frappe_network
     depends_on:
       - websocket
     restart: unless-stopped
@@ -112,7 +112,7 @@ services:
   scheduler:
     image: frappe/erpnext:v15.65.4
     networks:
-      - default
+      - frappe_network
     restart: unless-stopped
     command: ["bench", "schedule"]
     volumes:
@@ -122,7 +122,7 @@ services:
   queue-short:
     image: frappe/erpnext:v15.65.4
     networks:
-      - default
+      - frappe_network
     restart: unless-stopped
     command: ["bench", "worker", "--queue", "short,default"]
     volumes:
@@ -132,7 +132,7 @@ services:
   queue-long:
     image: frappe/erpnext:v15.65.4
     networks:
-      - default
+      - frappe_network
     restart: unless-stopped
     command: ["bench", "worker", "--queue", "long,default,short"]
     volumes:
@@ -142,7 +142,7 @@ services:
   websocket:
     image: frappe/erpnext:v15.65.4
     networks:
-      - default
+      - frappe_network
     restart: unless-stopped
     command: ["node", "/home/frappe/frappe-bench/apps/frappe/socketio.js"]
     volumes:
@@ -152,13 +152,13 @@ services:
   redis-cache:
     image: redis:6.2-alpine
     networks:
-      - default
+      - frappe_network
     restart: unless-stopped
 
   redis-queue:
     image: redis:6.2-alpine
     networks:
-      - default
+      - frappe_network
     restart: unless-stopped
     volumes:
       - redis-queue-data:/data
@@ -168,3 +168,8 @@ volumes:
   redis-queue-data:
   sites:
   logs:
+
+networks:
+  frappe_network:
+    external: true
+    name: m0gosgskkwckokg4w8k8k4cg
