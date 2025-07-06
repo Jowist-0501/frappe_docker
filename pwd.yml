@@ -40,9 +40,9 @@ services:
     restart: "no"
     entrypoint: ["bash", "-c"]
     command: >
-      wait-for-it -t 120 db:3306 &&
-      wait-for-it -t 120 redis-cache:6379 &&
-      wait-for-it -t 120 redis-queue:6379 &&
+      wait-for-it db:3306 -t 120 &&
+      wait-for-it redis-cache:6379 -t 120 &&
+      wait-for-it redis-queue:6379 -t 120 &&
       export start=$(date +%s) &&
       until grep -hs ^ sites/common_site_config.json | jq -e '.db_host and .redis_cache and .redis_queue'; do
         echo "Waiting for sites/common_site_config.json to be created";
@@ -50,7 +50,7 @@ services:
         if (( $(date +%s) - start > 120 )); then
           echo "could not find sites/common_site_config.json with required keys";
           exit 1;
-        fi
+        fi;
       done &&
       echo "sites/common_site_config.json found" &&
       bench new-site --mariadb-user-host-login-scope='%' --admin-password=admin --db-root-username=root --db-root-password=admin --install-app erpnext --set-default frontend
@@ -88,13 +88,9 @@ services:
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.erp.rule=Host(`erp.era-tools.de`)"
-      - "traefik.http.routers.erp.entrypoints=web"
       - "traefik.http.routers.erp.entrypoints=websecure"
       - "traefik.http.routers.erp.tls.certresolver=myresolver"
-      - "traefik.http.routers.erp.service=erp"
-      - "traefik.http.services.erp.loadbalancer.server.port=8020"
-    ports:
-      - "8020:80"
+      - "traefik.http.services.erp.loadbalancer.server.port=80"
     command: ["nginx-entrypoint.sh"]
     environment:
       BACKEND: backend:8000
